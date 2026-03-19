@@ -1380,7 +1380,7 @@ export default function App() {
   const triggerWhatsAppAutomation = useCallback(
     async (eventType: "order_status_changed" | "payment_recovery" | "order_completed" | "reorder_nudge" | "table_freed" | "send_digital_receipt" | "win_back_campaign", orderId: string, metadata?: Record<string, unknown>, overridePhone?: string) => {
       try {
-        await supabase.functions.invoke("whatsapp-automation-runner", {
+        const { data, error } = await supabase.functions.invoke("whatsapp-automation-runner", {
           body: {
             eventType,
             orderId,
@@ -1389,8 +1389,16 @@ export default function App() {
             metadata: metadata || {}
           }
         });
-      } catch {
-        // Best-effort automation. POS flow should never fail due to bot issues.
+        if (error) {
+          console.error("[WhatsApp] automation error:", error);
+          notify(`Receipt not sent: ${error.message || "Check console"}`, "error");
+        } else if (data && (data as { success?: boolean; error?: string }).success === false) {
+          const errMsg = (data as { error?: string }).error || "Unknown";
+          notify(`Receipt not sent: ${errMsg}`, "error");
+        }
+      } catch (e) {
+        console.error("[WhatsApp] automation failed:", e);
+        notify(`Receipt failed: ${e instanceof Error ? e.message : "Network error"}`, "error");
       }
     },
     [cafeId]
