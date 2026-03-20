@@ -56,7 +56,7 @@ export function ModifierSelector({
                   >
                     {opt.name}
                     {opt.priceModifier > 0 && (
-                      <span className="modifier-price">+₹{opt.priceModifier}</span>
+                      <span className="modifier-price">+AED {opt.priceModifier}</span>
                     )}
                   </button>
                 ))}

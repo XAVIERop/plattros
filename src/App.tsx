@@ -327,11 +327,13 @@ function MobileHeader(props: {
 function SuggestionDropdown({ 
   suggestions, 
   onSelect, 
-  visible 
+  visible,
+  formatCurrency = (n: number) => `₹${Math.round(n)}`
 }: { 
   suggestions: CustomerSummary[], 
   onSelect: (c: CustomerSummary) => void, 
-  visible: boolean 
+  visible: boolean;
+  formatCurrency?: (n: number) => string;
 }) {
   console.log(`SuggestionDropdown: visible=${visible}, suggestions=${suggestions.length}`);
   if (!visible || suggestions.length === 0) return null;
@@ -344,7 +346,7 @@ function SuggestionDropdown({
               <span className="suggest-name">{c.name}</span>
               <span className="suggest-phone">{c.phone}</span>
             </div>
-            <div className="suggest-meta">₹{Math.round(c.spend)} • {c.orderCount} visits</div>
+            <div className="suggest-meta">{formatCurrency(c.spend)} • {c.orderCount} visits</div>
           </li>
         ))}
       </ul>
@@ -414,7 +416,7 @@ export default function App() {
     processPrintQueue,
     syncMode
   } = useOfflineSync(cafeId);
-  const { theme, loading: brandingLoading } = useCafeBranding(cafeId);
+  const { theme, loading: brandingLoading, formatCurrency, currencySymbol } = useCafeBranding(cafeId);
   const { menu, source: menuSource, refresh: refreshMenu } = useCafeMenu(cafeId);
   const {
     getModifiersForItem,
@@ -1433,11 +1435,11 @@ export default function App() {
         ? splitSettlements.filter((row) => row.paid).reduce((sum, row) => sum + Number(row.amount || 0), 0)
         : splitTotal;
       if (Math.abs(splitTotal - orderTotal) > 1) {
-        notify(`Split total (₹${Math.round(splitTotal)}) must match order total (₹${orderTotal}).`, "error");
+        notify(`Split total (${formatCurrency(splitTotal)}) must match order total (${formatCurrency(orderTotal)}).`, "error");
         return;
       }
       if (Math.abs(paidTotal - orderTotal) > 1) {
-        notify(`Mark all split entries paid before processing. Paid: ₹${Math.round(paidTotal)} / ₹${orderTotal}.`, "error");
+        notify(`Mark all split entries paid before processing. Paid: ${formatCurrency(paidTotal)} / ${formatCurrency(orderTotal)}.`, "error");
         return;
       }
       if (splitSettlements.length > 0) {
@@ -1499,8 +1501,8 @@ export default function App() {
       ? []
       : [
           "Split settlement",
-          ...splitSettlements.map((row) => `${row.label} | ${row.method.toUpperCase()} | ₹${Math.round(row.amount)}${row.reference ? ` | ${row.reference}` : ""}`),
-          `Total settled: ₹${orderTotal}`
+          ...splitSettlements.map((row) => `${row.label} | ${row.method.toUpperCase()} | ${formatCurrency(row.amount)}${row.reference ? ` | ${row.reference}` : ""}`),
+          `Total settled: ${formatCurrency(orderTotal)}`
         ];
     await enqueuePrintJob({
       orderId: orderIdForPrint,
@@ -1511,10 +1513,10 @@ export default function App() {
         `Phone: ${customerPhone || "-"}`,
         `Mode: ${orderMode}`,
         `Items: ${cartItems.length}`,
-        `Subtotal: ₹${Math.round(cartSubtotal)}`,
-        `Discount: -₹${Math.round(discountAmount)}`,
-        `Service: +₹${Math.round(serviceChargeAmount)}`,
-        `Total: ₹${Math.round(orderTotal)}`,
+        `Subtotal: ${formatCurrency(cartSubtotal)}`,
+        `Discount: -${formatCurrency(discountAmount)}`,
+        `Service: +${formatCurrency(serviceChargeAmount)}`,
+        `Total: ${formatCurrency(orderTotal)}`,
         ...splitReceiptLines
       ],
       jobType: "bill",
@@ -2743,8 +2745,8 @@ export default function App() {
         ticketNo: summary.ordersForTable[0].order_number,
         lines: [
           `Table ${tableNo} Bill`,
-          ...summary.ordersForTable.map((order) => `${order.order_number} | ₹${Math.round(order.total_amount || 0)} | ${order.payment_status || "pending"}`),
-          `Table Total: ₹${Math.round(summary.total || 0)}`,
+          ...summary.ordersForTable.map((order) => `${order.order_number} | ${formatCurrency(order.total_amount || 0)} | ${order.payment_status || "pending"}`),
+          `Table Total: ${formatCurrency(summary.total || 0)}`,
           `Printed At: ${new Date().toLocaleString()}`
         ],
         jobType: "bill",
@@ -3927,7 +3929,7 @@ export default function App() {
                 <strong>Good Morning, {selectedAuthStaff?.name.split(" ")[0] || "Ricardo"}</strong>
               </header>
               <div className="auth-preview-kpis">
-                <article><p>Total Earning</p><strong>₹{Math.round(authPreview.totalEarning)}</strong></article>
+                <article><p>Total Earning</p><strong>{formatCurrency(authPreview.totalEarning)}</strong></article>
                 <article><p>In Progress</p><strong>{authPreview.inProgress}</strong></article>
                 <article><p>Completed</p><strong>{authPreview.readyToServe}</strong></article>
               </div>
@@ -3958,7 +3960,7 @@ export default function App() {
           <h4>Table {tableSummary.tableNo}</h4>
           <div className="inline-actions table-detail-head-right">
             <span className={`table-detail-status-pill table-status-${tableSummary.status}`}>
-              {tableSummary.status.split("_").join(" ")} • ₹{Math.round(tableSummary.total)}
+              {tableSummary.status.split("_").join(" ")} • {formatCurrency(tableSummary.total)}
             </span>
             <button className="ghost table-detail-close-btn" aria-label="Close" onClick={() => setSelectedTableNo(null)}>
               <X size={16} />
@@ -4121,16 +4123,16 @@ export default function App() {
               {selectedTableBillBreakdown.itemRows.map((item) => (
                 <li key={item.key} className="row tiny">
                   <span>{item.name} x {item.qty}</span>
-                  <strong>₹{Math.round(item.amount)}</strong>
+                  <strong>{formatCurrency(item.amount)}</strong>
                 </li>
               ))}
             </ul>
             <div className="totals">
-              <div className="row"><span>Subtotal</span><strong>₹{selectedTableBillBreakdown.subtotal}</strong></div>
-              <div className="row"><span>Discount</span><strong>- ₹{selectedTableBillBreakdown.discount}</strong></div>
-              <div className="row"><span>Service Charge</span><strong>+ ₹{selectedTableBillBreakdown.serviceCharge}</strong></div>
-              <div className="row"><span>Tax</span><strong>+ ₹{selectedTableBillBreakdown.tax}</strong></div>
-              <div className="row grand"><span>Total</span><strong>₹{selectedTableBillBreakdown.total}</strong></div>
+              <div className="row"><span>Subtotal</span><strong>{formatCurrency(selectedTableBillBreakdown.subtotal)}</strong></div>
+              <div className="row"><span>Discount</span><strong>- {formatCurrency(selectedTableBillBreakdown.discount)}</strong></div>
+              <div className="row"><span>Service Charge</span><strong>+ {formatCurrency(selectedTableBillBreakdown.serviceCharge)}</strong></div>
+              <div className="row"><span>Tax</span><strong>+ {formatCurrency(selectedTableBillBreakdown.tax)}</strong></div>
+              <div className="row grand"><span>Total</span><strong>{formatCurrency(selectedTableBillBreakdown.total)}</strong></div>
             </div>
           </section>
         )}
@@ -4428,7 +4430,7 @@ export default function App() {
             <section className="dashboard-kpi-hero">
               <article className="dashboard-kpi-card hero-revenue dashboard-kpi-clickable" onClick={() => setActiveView("analytics")}>
                 <div className="dashboard-kpi-label">Total Earning</div>
-                <div className="dashboard-kpi-value">₹{dashboardKpis.totalEarning}</div>
+                <div className="dashboard-kpi-value">{formatCurrency(dashboardKpis.totalEarning)}</div>
               </article>
               <article
                 className="dashboard-kpi-card dashboard-kpi-clickable"
@@ -4462,7 +4464,7 @@ export default function App() {
               </article>
               <article className="dashboard-kpi-card dashboard-kpi-clickable" onClick={() => setActiveView("analytics")}>
                 <div className="dashboard-kpi-label">Avg Ticket</div>
-                <div className="dashboard-kpi-value">₹{dashboardKpis.avgTicket}</div>
+                <div className="dashboard-kpi-value">{formatCurrency(dashboardKpis.avgTicket)}</div>
               </article>
               {rolloutFlags.businessModules && (
                 <article
@@ -4519,7 +4521,7 @@ export default function App() {
                                 )}
                               </div>
                               <p className="tiny muted" style={{ margin: 0 }}>
-                                {order.customer_name || "Walk-in"} • {orderTypeDisplay(order)} • ₹{Math.round(order.total_amount || 0)}
+                                {order.customer_name || "Walk-in"} • {orderTypeDisplay(order)} • {formatCurrency(order.total_amount || 0)}
                               </p>
                             </div>
                             <div className="dashboard-order-actions">
@@ -4588,7 +4590,7 @@ export default function App() {
                                 )}
                               </div>
                               <p className="tiny muted" style={{ margin: 0 }}>
-                                {order.customer_name || "Walk-in"} • {orderTypeDisplay(order)} • ₹{Math.round(order.total_amount || 0)}
+                                {order.customer_name || "Walk-in"} • {orderTypeDisplay(order)} • {formatCurrency(order.total_amount || 0)}
                               </p>
                             </div>
                             <div className="dashboard-order-actions">
@@ -4644,7 +4646,7 @@ export default function App() {
                               )}
                             </div>
                             <p className="tiny muted" style={{ margin: 0 }}>
-                              {order.customer_name || "Walk-in"} • {orderTypeDisplay(order)} • ₹{Math.round(order.total_amount || 0)}
+                              {order.customer_name || "Walk-in"} • {orderTypeDisplay(order)} • {formatCurrency(order.total_amount || 0)}
                             </p>
                           </div>
                           <div className="dashboard-order-actions">
@@ -4794,7 +4796,7 @@ export default function App() {
                               <option value="">Select item</option>
                               {menu.map((menuItem) => (
                                 <option key={menuItem.id} value={menuItem.id}>
-                                  {menuItem.name} (₹{menuItem.basePrice})
+                                  {menuItem.name} ({formatCurrency(menuItem.basePrice)})
                                 </option>
                               ))}
                             </select>
@@ -4839,9 +4841,9 @@ export default function App() {
                     <li key={item.id}>
                       <div className="row">
                         <span>{item.menu_items?.[0]?.name || "Item"} x {item.quantity}</span>
-                        <strong>₹{item.total_price}</strong>
+                        <strong>{formatCurrency(item.total_price)}</strong>
                       </div>
-                      <p className="tiny muted">Unit: ₹{item.unit_price}</p>
+                      <p className="tiny muted">Unit: {formatCurrency(item.unit_price)}</p>
                       {item.special_instructions && !item.special_instructions.trim().startsWith("{") && (
                         <p className="tiny muted">{item.special_instructions}</p>
                       )}
@@ -4861,12 +4863,12 @@ export default function App() {
                 <div className="totals">
                   <div className="row">
                     <span>Subtotal</span>
-                    <strong>₹{displayedSelectedOrderItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0)}</strong>
+                    <strong>{formatCurrency(displayedSelectedOrderItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0))}</strong>
                   </div>
                   <div className="row">
                     <span>Tax + Charges</span>
                     <strong>
-                      ₹{" "}
+                      {currencySymbol}
                       {Math.max(
                         0,
                         Number(selectedOrder.total_amount || 0) -
@@ -4877,7 +4879,7 @@ export default function App() {
                   <div className="row grand">
                     <span>Total</span>
                     <strong>
-                      ₹{" "}
+                      {currencySymbol}
                       {Math.round(
                         displayedSelectedOrderItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0) +
                           Math.max(
@@ -5044,7 +5046,7 @@ export default function App() {
                           <h4>{item.name}</h4>
                         </div>
                         <div className="card-footer">
-                          <p className="price">₹{item.basePrice}</p>
+                          <p className="price">{formatCurrency(item.basePrice)}</p>
                           <div className="qty-controls" onClick={e => e.stopPropagation()}>
                             <button type="button" className="qty-btn" onClick={handleDecrement} disabled={qty === 0}>-</button>
                             <span className="qty-display">{qty}</span>
@@ -5066,7 +5068,7 @@ export default function App() {
                 </div>
                 <div className="proceed-summary">
                   <span className="proceed-count">{cartItems.length} Items</span>
-                  <span className="proceed-total">₹{Math.round(cartItems.reduce((acc, ci) => acc + ci.lineTotal, 0))}</span>
+                  <span className="proceed-total">{formatCurrency(cartItems.reduce((acc, ci) => acc + ci.lineTotal, 0))}</span>
                   <ArrowRight size={20} />
                 </div>
               </div>
@@ -5187,7 +5189,7 @@ export default function App() {
               </article>
               <article className="kpi">
                 <span>Avg Ticket</span>
-                <strong>₹{orderOpsKpis.avgTicket}</strong>
+                <strong>{formatCurrency(orderOpsKpis.avgTicket)}</strong>
               </article>
             </div>
             <div className="orders-landscape-split">
@@ -5228,11 +5230,11 @@ export default function App() {
                         <div key={item.id} className="order-card-item-row tiny">
                           <span>{item.menu_items?.[0]?.name || "Item"}</span>
                           <span>x{item.quantity}</span>
-                          <strong>₹{item.total_price}</strong>
+                          <strong>{formatCurrency(item.total_price)}</strong>
                         </div>
                       ))}
                     </div>
-                    <p className="order-total">₹{order.total_amount}</p>
+                    <p className="order-total">{formatCurrency(order.total_amount)}</p>
                     <div className="inline-actions">
                       <button className="ghost" onClick={() => setSelectedOrderId(order.id)}>
                         See Details
@@ -5304,7 +5306,7 @@ export default function App() {
                       {order.phone_number && <span className="tiny muted">{order.phone_number}</span>}
                     </div>
                     <div className="orders-pu-col orders-pu-total">
-                      <strong>₹{order.total_amount}</strong>
+                      <strong>{formatCurrency(order.total_amount)}</strong>
                     </div>
                     <div className="orders-pu-col orders-pu-actions" onClick={(e) => e.stopPropagation()}>
                       {primaryAction && (
@@ -5460,7 +5462,7 @@ export default function App() {
                               <option value="">Select item</option>
                               {menu.map((menuItem) => (
                                 <option key={menuItem.id} value={menuItem.id}>
-                                  {menuItem.name} (₹{menuItem.basePrice})
+                                  {menuItem.name} ({formatCurrency(menuItem.basePrice)})
                                 </option>
                               ))}
                             </select>
@@ -5505,9 +5507,9 @@ export default function App() {
                     <li key={item.id}>
                       <div className="row">
                         <span>{item.menu_items?.[0]?.name || "Item"} x {item.quantity}</span>
-                        <strong>₹{item.total_price}</strong>
+                        <strong>{formatCurrency(item.total_price)}</strong>
                       </div>
-                      <p className="tiny muted">Unit: ₹{item.unit_price}</p>
+                      <p className="tiny muted">Unit: {formatCurrency(item.unit_price)}</p>
                       {item.special_instructions && !item.special_instructions.trim().startsWith("{") && (
                         <p className="tiny muted">{item.special_instructions}</p>
                       )}
@@ -5527,12 +5529,12 @@ export default function App() {
                 <div className="totals">
                   <div className="row">
                     <span>Subtotal</span>
-                    <strong>₹{displayedSelectedOrderItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0)}</strong>
+                    <strong>{formatCurrency(displayedSelectedOrderItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0))}</strong>
                   </div>
                   <div className="row">
                     <span>Tax + Charges</span>
                     <strong>
-                      ₹{" "}
+                      {currencySymbol}
                       {Math.max(
                         0,
                         Number(selectedOrder.total_amount || 0) -
@@ -5543,7 +5545,7 @@ export default function App() {
                   <div className="row grand">
                     <span>Total</span>
                     <strong>
-                      ₹{" "}
+                      {currencySymbol}
                       {Math.round(
                         displayedSelectedOrderItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0) +
                           Math.max(
@@ -5634,7 +5636,7 @@ export default function App() {
                             <span className="tiny muted">{ageMinutes} min</span>
                           </div>
                           <p className="tiny muted">{order.customer_name || "Walk-in"} • {orderTypeDisplay(order)}</p>
-                          <p className="tiny muted">₹{Math.round(order.total_amount || 0)}</p>
+                          <p className="tiny muted">{formatCurrency(order.total_amount || 0)}</p>
                           <div className="inline-actions">
                             {primaryAction && (
                               <button
@@ -5805,7 +5807,7 @@ export default function App() {
                       <span className="table-status-badge">{statusLabel}</span>
                     </div>
                     <p className="tiny table-tile-amount">
-                      ₹{Math.round(table.total)}
+                      {formatCurrency(table.total)}
                       {table.ordersForTable.length > 0 && table.elapsedMinutes > 0 ? ` • ${table.elapsedMinutes}m` : ""}
                     </p>
                     {table.meta?.reservationName && (
@@ -5977,7 +5979,7 @@ export default function App() {
                 )}
               </label>
               <label className="field">
-                <span>Price (₹)</span>
+                <span>Price ({currencySymbol})</span>
                 <input type="number" min="0" step="0.01" value={menuPrice} onChange={(e) => setMenuPrice(e.target.value)} placeholder="0" />
               </label>
             </div>
@@ -6051,7 +6053,7 @@ export default function App() {
                           ) : (
                             <div className="row">
                               <span>
-                                {item.name} • ₹{item.price} <span className="tiny muted">({item.is_available ? "in stock" : "out of stock"})</span>
+                                {item.name} • {formatCurrency(item.price)} <span className="tiny muted">({item.is_available ? "in stock" : "out of stock"})</span>
                               </span>
                               <div className="inline-actions">
                                 <button
@@ -6241,8 +6243,8 @@ export default function App() {
                     </tr>
                   )}
                   {filteredCustomers.map((row) => (
-                    <tr 
-                      key={row.phone} 
+                    <tr
+                      key={row.phone}
                       onClick={() => {
                         setSelectedCustomer(row);
                         void fetchCustomerDetails(row.phone);
@@ -6252,7 +6254,7 @@ export default function App() {
                       <td style={{ fontWeight: 500 }}>{row.name}</td>
                       <td>{row.phone}</td>
                       <td>{row.orderCount}</td>
-                      <td>₹{Math.round(row.spend)}</td>
+                      <td>{formatCurrency(row.spend)}</td>
                       <td>{row.loyaltyPoints ?? 0}</td>
                       <td style={{ color: '#64748b' }}>
                         {row.lastVisit ? new Date(row.lastVisit).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}
@@ -6373,11 +6375,11 @@ export default function App() {
                 </article>
                 <article className="analytics-kpi-card hero-revenue">
                   <div className="analytics-kpi-label">Revenue</div>
-                  <div className="analytics-kpi-value">₹{analyticsKpis.revenue}</div>
+                  <div className="analytics-kpi-value">{formatCurrency(analyticsKpis.revenue)}</div>
                 </article>
                 <article className="analytics-kpi-card">
                   <div className="analytics-kpi-label">Avg Ticket</div>
-                  <div className="analytics-kpi-value">₹{analyticsKpis.avgTicket}</div>
+                  <div className="analytics-kpi-value">{formatCurrency(analyticsKpis.avgTicket)}</div>
                 </article>
                 <article className="analytics-kpi-card">
                   <div className="analytics-kpi-label">Completion Rate</div>
@@ -6451,7 +6453,7 @@ export default function App() {
                         <div
                           key={hour}
                           className={`analytics-hourly-cell ${hasData ? "has-data" : ""} ${isPeak ? "peak" : ""}`}
-                          title={`${hour}: ${count} orders, ₹${Math.round(revenue)}`}
+                          title={`${hour}: ${count} orders, ${formatCurrency(revenue)}`}
                         >
                           <span>{hour.slice(0, 2)}</span>
                           {hasData && <span>{count}</span>}
@@ -6473,7 +6475,7 @@ export default function App() {
                           <div className="analytics-leaderboard-name">{row.name}</div>
                           <div className="analytics-leaderboard-meta">{row.orders} orders</div>
                         </div>
-                        <div className="analytics-leaderboard-value">₹{Math.round(row.spend)}</div>
+                        <div className="analytics-leaderboard-value">{formatCurrency(row.spend)}</div>
                       </div>
                     ))
                   )}
@@ -6523,7 +6525,7 @@ export default function App() {
                           <div className="analytics-leaderboard-name">{item.name}</div>
                           <div className="analytics-leaderboard-meta">qty {item.qty}</div>
                         </div>
-                        <div className="analytics-leaderboard-value">₹{Math.round(item.revenue)}</div>
+                        <div className="analytics-leaderboard-value">{formatCurrency(item.revenue)}</div>
                       </div>
                     ))
                   )}
@@ -6681,12 +6683,12 @@ export default function App() {
               </article>
               <article className="kpi">
                 <span>Revenue</span>
-                <strong>₹{todayOrders.filter((o) => o.payment_status === "paid").reduce((sum, o) => sum + Number(o.total_amount || 0), 0)}</strong>
+                <strong>{formatCurrency(todayOrders.filter((o) => o.payment_status === "paid").reduce((sum, o) => sum + Number(o.total_amount || 0), 0))}</strong>
               </article>
               <article className="kpi">
                 <span>Avg Order</span>
                 <strong>
-                  ₹{todayOrders.length === 0 ? 0 : Math.round(todayOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) / todayOrders.length)}
+                  {formatCurrency(todayOrders.length === 0 ? 0 : Math.round(todayOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0) / todayOrders.length))}
                 </strong>
               </article>
             </div>
@@ -6709,7 +6711,7 @@ export default function App() {
                   <div className="trend-bar">
                     <div className="trend-fill" style={{ width: `${Math.min(100, value.revenue / 20)}%` }} />
                   </div>
-                  <p className="tiny muted">₹{Math.round(value.revenue)}</p>
+                  <p className="tiny muted">{formatCurrency(value.revenue)}</p>
                 </li>
               ))}
             </ul>
@@ -7031,17 +7033,17 @@ export default function App() {
                     <Trash2 size={16} />
                   </button>
                 </div>
-                <strong className="bill-line-total">₹{item.lineTotal}</strong>
+                <strong className="bill-line-total">{formatCurrency(item.lineTotal)}</strong>
               </div>
             </li>
           ))}
         </ul>
           <div className="totals bill-totals">
             <div className="row"><span>Items</span><strong>{cartItems.length}</strong></div>
-            <div className="row"><span>Subtotal</span><strong>₹{cartSubtotal}</strong></div>
-            <div className={`row ${discountAmount > 0 ? "bill-row-discount" : ""}`}><span>Discount</span><strong>- ₹{discountAmount}</strong></div>
-            <div className="row"><span>Service Tax</span><strong>+ ₹{serviceChargeAmount}</strong></div>
-            <div className="row grand"><span>Total</span><strong>₹{orderTotal}</strong></div>
+            <div className="row"><span>Subtotal</span><strong>{formatCurrency(cartSubtotal)}</strong></div>
+            <div className={`row ${discountAmount > 0 ? "bill-row-discount" : ""}`}><span>Discount</span><strong>- {formatCurrency(discountAmount)}</strong></div>
+            <div className="row"><span>Service Tax</span><strong>+ {formatCurrency(serviceChargeAmount)}</strong></div>
+            <div className="row grand"><span>Total</span><strong>{formatCurrency(orderTotal)}</strong></div>
           </div>
         </div>
 
@@ -7051,12 +7053,12 @@ export default function App() {
             <div className="bill-discount-col">
               <span className="bill-discount-col-label">Discount Type</span>
               <div className="bill-discount-controls">
-                <button className={`ghost bill-discount-chip ${discountMode === "amount" ? "chip-active" : ""}`} onClick={() => setDiscountMode("amount")} title="Amount">₹</button>
+                <button className={`ghost bill-discount-chip ${discountMode === "amount" ? "chip-active" : ""}`} onClick={() => setDiscountMode("amount")} title="Amount">{currencySymbol}</button>
                 <button className={`ghost bill-discount-chip ${discountMode === "percent" ? "chip-active" : ""}`} onClick={() => setDiscountMode("percent")} title="Percent">%</button>
               </div>
             </div>
             <label className="field bill-discount-field">
-              <span>Discount {discountMode === "percent" ? "(%)" : "(₹)"}</span>
+              <span>Discount {discountMode === "percent" ? "(%)" : `(${currencySymbol})`}</span>
               <input value={discountInput} onChange={(e) => setDiscountInput(e.target.value)} />
             </label>
             <label className="field bill-discount-field">
@@ -7129,7 +7131,7 @@ export default function App() {
                         setAiSuggestion(null);
                       }}
                     >
-                      + Add {item.name} (₹{item.basePrice})
+                      + Add {item.name} ({formatCurrency(item.basePrice)})
                     </button>
                   );
                 })()}
@@ -7230,7 +7232,7 @@ export default function App() {
               ))}
             </ul>
             <p className="tiny muted">
-              Allocated: ₹{Math.round(splitAllocatedTotal)} / ₹{orderTotal} • Paid: ₹{Math.round(splitPaidTotal)} / ₹{orderTotal}
+              Allocated: {formatCurrency(splitAllocatedTotal)} / {formatCurrency(orderTotal)} • Paid: {formatCurrency(splitPaidTotal)} / {formatCurrency(orderTotal)}
             </p>
             <div className="triple">
               <label className="field">
@@ -7263,7 +7265,8 @@ export default function App() {
               />
               <SuggestionDropdown 
                 suggestions={nameSuggestions} 
-                onSelect={handleSelectCustomer} 
+                onSelect={handleSelectCustomer}
+                formatCurrency={formatCurrency} 
                 visible={showNameSuggestions} 
               />
             </label>
@@ -7311,7 +7314,8 @@ export default function App() {
               )}
               <SuggestionDropdown 
                 suggestions={phoneSuggestions} 
-                onSelect={handleSelectCustomer} 
+                onSelect={handleSelectCustomer}
+                formatCurrency={formatCurrency} 
                 visible={showPhoneSuggestions} 
               />
             </label>
@@ -7537,7 +7541,7 @@ export default function App() {
         <div className="mobile-cart-summary">
           <div className="mobile-cart-info">
             <h4>{cartItems.length} Items</h4>
-            <p>₹{orderTotal}</p>
+            <p>{formatCurrency(orderTotal)}</p>
           </div>
           <button className="mobile-cart-btn" onClick={() => setIsMobileCartOpen(true)}>
             View Cart
@@ -7566,7 +7570,7 @@ export default function App() {
                     <div>
                       <span className="mobile-cart-item-name">{item.productName}</span>
                     </div>
-                    <strong className="mobile-cart-item-total">₹{item.lineTotal}</strong>
+                    <strong className="mobile-cart-item-total">{formatCurrency(item.lineTotal)}</strong>
                   </div>
                   <div className="mobile-cart-item-controls">
                     <div className="bill-stepper" style={{ background: "#f8fafc", borderRadius: "8px", padding: "4px" }}>
@@ -7633,7 +7637,7 @@ export default function App() {
                             setAiSuggestion(null);
                           }}
                         >
-                          + Add {item.name} (₹{item.basePrice})
+                          + Add {item.name} ({formatCurrency(item.basePrice)})
                         </button>
                       );
                     })()}
@@ -7657,7 +7661,8 @@ export default function App() {
                   <SuggestionDropdown 
                     suggestions={nameSuggestions} 
                     onSelect={handleSelectCustomer} 
-                    visible={showNameSuggestions} 
+                    visible={showNameSuggestions}
+                    formatCurrency={formatCurrency}
                   />
                 </label>
                 <label className="field" style={{ position: 'relative' }}>
@@ -7675,10 +7680,11 @@ export default function App() {
                     onFocus={() => setShowPhoneSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowPhoneSuggestions(false), 200)}
                   />
-                  <SuggestionDropdown 
+<SuggestionDropdown 
                     suggestions={phoneSuggestions} 
-                    onSelect={handleSelectCustomer} 
-                    visible={showPhoneSuggestions} 
+                    onSelect={handleSelectCustomer}
+                    visible={showPhoneSuggestions}
+                    formatCurrency={formatCurrency}
                   />
                 </label>
 
@@ -7754,8 +7760,8 @@ export default function App() {
             )}
 
             <div className="totals" style={{ padding: "0 8px" }}>
-              <div className="row"><span>Subtotal</span><strong>₹{cartSubtotal}</strong></div>
-              <div className="row grand"><span>Total</span><strong>₹{orderTotal}</strong></div>
+              <div className="row"><span>Subtotal</span><strong>{formatCurrency(cartSubtotal)}</strong></div>
+              <div className="row grand"><span>Total</span><strong>{formatCurrency(orderTotal)}</strong></div>
             </div>
           </div>
 
@@ -7768,7 +7774,7 @@ export default function App() {
                 setIsMobileCartOpen(false);
               }}
             >
-              Confirm & Print Receipt (₹{orderTotal})
+              Confirm & Print Receipt ({formatCurrency(orderTotal)})
             </button>
           </footer>
         </div>
@@ -7817,7 +7823,7 @@ export default function App() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
                 <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '8px', fontWeight: 500 }}>Lifetime Spend</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>₹{Math.round(selectedCustomer.spend)}</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(selectedCustomer.spend)}</div>
                 </div>
                 <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '8px', fontWeight: 500 }}>Total Visits</div>
@@ -7825,7 +7831,7 @@ export default function App() {
                 </div>
                 <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '8px', fontWeight: 500 }}>Avg. Order</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>₹{Math.round(selectedCustomer.spend / selectedCustomer.orderCount)}</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(selectedCustomer.spend / selectedCustomer.orderCount)}</div>
                 </div>
                 <div style={{ padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '16px', border: '1px solid #bbf7d0' }}>
                   <div style={{ fontSize: '0.85rem', color: '#15803d', marginBottom: '8px', fontWeight: 600 }}>Loyalty Points</div>
@@ -7949,7 +7955,7 @@ export default function App() {
                       }).join(', ')}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>₹{Math.round(order.total_amount || 0)}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{formatCurrency(order.total_amount || 0)}</span>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
                           className="ghost" 

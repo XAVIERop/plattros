@@ -372,7 +372,7 @@ export function LoyaltyPanel({ cafeId, onMobileHeader }: LoyaltyPanelProps) {
                   <td>{c.status}</td>
                   <td>{c.sent}</td>
                   <td>{c.opened}</td>
-                  <td>₹{Number(c.revenue || 0)}</td>
+                  <td>AED {Number(c.revenue || 0)}</td>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <select
@@ -464,7 +464,7 @@ export function LoyaltyPanel({ cafeId, onMobileHeader }: LoyaltyPanelProps) {
                 </div>
                 {rewardForm.type === "discount" && (
                   <div>
-                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 500, marginBottom: 4 }}>Discount (₹)</label>
+                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 500, marginBottom: 4 }}>Discount (AED)</label>
                     <input
                       type="number"
                       min={1}
@@ -620,7 +620,7 @@ export function LoyaltyPanel({ cafeId, onMobileHeader }: LoyaltyPanelProps) {
                 <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: 12 }}>Points Ratio</label>
                 <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
                   <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Every ₹ spent</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Every AED spent</span>
                     <input type="number" value={settingsForm.spendAmount} onChange={(e) => setSettingsForm((s) => ({ ...s, spendAmount: e.target.value }))} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border-default)", marginTop: 4 }} />
                   </div>
                   <div style={{ flex: 1 }}>

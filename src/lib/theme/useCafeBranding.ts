@@ -7,6 +7,20 @@ export interface CafeTheme {
   cafeName?: string;
   type?: string;
   description?: string;
+  /** ISO 4217: INR, AED, USD. Used for POS display. */
+  currency?: string;
+}
+
+/** Format amount with cafe currency. Use from useCafeBranding. */
+export function formatCurrency(amount: number, currency: string = "INR"): string {
+  const symbol = currency === "AED" ? "AED " : currency === "USD" ? "$" : "₹";
+  const formatted = Math.round(amount).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return `${symbol}${formatted}`;
+}
+
+/** Currency symbol only (for labels like "Discount (AED)"). */
+export function getCurrencySymbol(currency: string = "INR"): string {
+  return currency === "AED" ? "AED" : currency === "USD" ? "USD" : "₹";
 }
 
 // Converts generic hex (#ff0000) to Tailwind's HSL component format (e.g. "0 100% 50%")
@@ -73,7 +87,7 @@ export function useCafeBranding(cafeId: string | null) {
       setLoading(true);
       const { data, error } = await supabase
         .from("cafes")
-        .select("name, primary_color, logo_url, type, description")
+        .select("name, primary_color, logo_url, type, description, currency")
         .eq("id", cafeId)
         .maybeSingle();
 
@@ -84,6 +98,7 @@ export function useCafeBranding(cafeId: string | null) {
           logoUrl: data.logo_url,
           type: data.type,
           description: data.description,
+          currency: data.currency || "INR",
         });
 
         // Inject Tailwind variables globally
@@ -114,5 +129,8 @@ export function useCafeBranding(cafeId: string | null) {
     void fetchTheme();
   }, [cafeId]);
 
-  return { theme, loading };
+  const curr = theme.currency || "INR";
+  const formatCurrencyFn = (amount: number) => formatCurrency(amount, curr);
+  const currencySymbol = getCurrencySymbol(curr);
+  return { theme, loading, formatCurrency: formatCurrencyFn, currencySymbol: currencySymbol };
 }

@@ -12,7 +12,7 @@ const tiers = [
   },
   {
     name: "Pro",
-    price: "₹999",
+    price: "AED 999",
     period: "/month",
     features: ["1 cafe", "Loyalty & CRM", "WhatsApp campaigns", "Print (KOT + receipt)", "Priority support"],
     cta: "Get Pro",
